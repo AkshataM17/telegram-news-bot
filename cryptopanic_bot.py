@@ -29,7 +29,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Configure cryptocurrencies to monitor
 CRYPTOCURRENCIES = ["BTC", "ETH", "SOL", "XRP", "DOGE"]  # Add or remove as needed
-UPDATE_INTERVAL = 60 * 30  # Check every 30 minutes
+UPDATE_INTERVAL = 60 * 60 * 12  # Check every 12 hours (60 seconds * 60 minutes * 12 hours)
 
 class CryptoPanicBot:
     def __init__(self):
@@ -59,7 +59,7 @@ class CryptoPanicBot:
             "/start - Start the bot\n"
             "/help - Show this help message\n"
             "/news - Get immediate news update\n\n"
-            "The bot will automatically post news updates at regular intervals."
+            "The bot will automatically post news updates every 12 hours."
         )
     
     async def news_command(self, update, context):
@@ -242,65 +242,63 @@ class CryptoPanicBot:
     def format_telegram_message(self, news_data: Dict[str, List[Dict[str, Any]]], fud_analysis: str = "") -> str:
         """Format the news data into a nicely formatted Telegram message"""
         try:
-            # Count articles by sentiment
-            bullish_count = len(news_data["bullish"])
-            bearish_count = len(news_data["bearish"])
-            neutral_count = len(news_data["neutral"])
-            
-            # Determine overall sentiment
-            if bullish_count > bearish_count:
-                overall = "bullish 📈"
-            elif bearish_count > bullish_count:
-                overall = "bearish 📉"
-            else:
-                overall = "neutral ⚖️"
-            
-            # Format the message
+            # Format the message with improved formatting
             message = f"🔔 *CRYPTO NEWS SENTIMENT UPDATE* 🔔\n\n"
-            message += f"Overall market sentiment: *{overall}*\n"
-            message += f"• Bullish articles: {bullish_count}\n"
-            message += f"• Bearish articles: {bearish_count}\n"
-            message += f"• Neutral articles: {neutral_count}\n\n"
             
             # Add AI-generated FUD analysis if available
             if fud_analysis:
-                message += f"💭 *AI SENTIMENT ANALYSIS*\n{fud_analysis}\n\n"
+                message += f"*AI SENTIMENT ANALYSIS*\n{fud_analysis}\n\n"
             
             # Add bullish news
             if news_data["bullish"]:
-                message += "📈 *BULLISH NEWS*\n"
-                for i, item in enumerate(news_data["bullish"][:3], 1):
+                message += "📈 *BULLISH NEWS*\n\n"
+                for i, item in enumerate(news_data["bullish"][:5], 1):
                     # Format currencies
                     currencies = ""
                     if item["currencies"]:
                         currencies = f" [{', '.join(item['currencies'])}]"
+                    
+                    # Clean up title - truncate if too long
+                    title = item["title"]
+                    if len(title) > 100:
+                        title = title[:97] + "..."
                         
-                    message += f"{i}. [{item['title']}]({item['url']}){currencies}\n"
-                    message += f"   Source: {item['source']}\n\n"
+                    message += f"{i}. [{title}]({item['url']}){currencies}\n"
+                    message += f"   *Source:* {item['source']}\n\n"
             
             # Add bearish news
             if news_data["bearish"]:
-                message += "📉 *BEARISH NEWS*\n"
-                for i, item in enumerate(news_data["bearish"][:3], 1):
+                message += "📉 *BEARISH NEWS*\n\n"
+                for i, item in enumerate(news_data["bearish"][:5], 1):
                     # Format currencies
                     currencies = ""
                     if item["currencies"]:
                         currencies = f" [{', '.join(item['currencies'])}]"
+                    
+                    # Clean up title - truncate if too long
+                    title = item["title"]
+                    if len(title) > 100:
+                        title = title[:97] + "..."
                         
-                    message += f"{i}. [{item['title']}]({item['url']}){currencies}\n"
-                    message += f"   Source: {item['source']}\n\n"
+                    message += f"{i}. [{title}]({item['url']}){currencies}\n"
+                    message += f"   *Source:* {item['source']}\n\n"
             
-            # Add neutral news if we have space
-            if news_data["neutral"] and (bullish_count + bearish_count < 4):
-                message += "⚖️ *NEUTRAL NEWS*\n"
-                for i, item in enumerate(news_data["neutral"][:2], 1):
+            # Add neutral news if we have any
+            if news_data["neutral"]:
+                message += "⚖️ *NEUTRAL NEWS*\n\n"
+                for i, item in enumerate(news_data["neutral"][:5], 1):
                     # Format currencies
                     currencies = ""
                     if item["currencies"]:
                         currencies = f" [{', '.join(item['currencies'])}]"
+                    
+                    # Clean up title - truncate if too long
+                    title = item["title"]
+                    if len(title) > 100:
+                        title = title[:97] + "..."
                         
-                    message += f"{i}. [{item['title']}]({item['url']}){currencies}\n"
-                    message += f"   Source: {item['source']}\n\n"
+                    message += f"{i}. [{title}]({item['url']}){currencies}\n"
+                    message += f"   *Source:* {item['source']}\n\n"
             
             # Add timestamp and disclaimer
             message += f"_Updated on {datetime.now().strftime('%Y-%m-%d %H:%M')} UTC_\n"
@@ -368,7 +366,7 @@ class CryptoPanicBot:
                 chat_id=CHANNEL_ID,
                 text=message,
                 parse_mode='Markdown',
-                disable_web_page_preview=False  # Enable previews for news links
+                disable_web_page_preview=True  # Disable previews to avoid showing website previews
             )
             
             # Update the last sent news
